@@ -1,0 +1,37 @@
+flowchart TD
+    subgraph BotSession["Session Context Injection & Authentication"]
+        CONN["Psycopg2 DB Connection"]
+        SET_SESSION["EXECUTE: SET session.username = 'da@revisor1.dk'"]
+        CONN --> SET_SESSION
+    end
+
+    subgraph CoreTables["Double-Entry Ledger Tables"]
+        RECEIPTS[("receipts<br/>(id, customer_id, amount, s3_path_to_image, degrees)")]
+        TYPING_OUT[("double_entry.typing_output<br/>(id, entry_date, amount, currency, vat_amount, matching_info)")]
+        RECEIPT_OCRS[("double_entry.receipt_ocrs<br/>(receipt_id, raw_ocr, error_message, extended_reconciliation_data)")]
+    end
+
+    subgraph AuditLogs["Audit & Telemetry Tables"]
+        TYPER_BOT_OUT[("task_bots.typer_bot_output<br/>(id, output JSONB, updated_at)")]
+        BOT_LOGS[("task_bots.logs<br/>(id, botname, action, result, parameters JSONB)")]
+    end
+
+    subgraph BankRules["Reconciliation Rule Engine"]
+        BANK_RULES[("bank_transaction_rules<br/>(id, customer_id, active, rule_expression, min_amount, max_amount, account, vat_code)")]
+    end
+
+    subgraph Triggers["PostgreSQL Audit & Invariant Triggers"]
+        TRIG_AUDIT["trg_enforce_session_audit<br/>Assert session.username IS NOT NULL"]
+    end
+
+    SET_SESSION -->|"Authorizes Writes"| TRIG_AUDIT
+    TRIG_AUDIT -.->|"Guards Mutation"| TYPING_OUT
+    TRIG_AUDIT -.->|"Guards Mutation"| TYPER_BOT_OUT
+
+    SET_SESSION -->|"1. Read S3 Key & Rotation Degrees"| RECEIPTS
+    SET_SESSION -->|"2. Upsert Raw OCR & JSONB Reconciliation"| RECEIPT_OCRS
+    SET_SESSION -->|"3. Atomic Double-Entry Ledger Update"| TYPING_OUT
+    SET_SESSION -->|"4. Complete Extraction Audit Payload"| TYPER_BOT_OUT
+    SET_SESSION -.->|"On Unexpected Failure: Audit Exception"| BOT_LOGS
+
+    BANK_RULES -->|"Matches Bank Statement Feeds"| RECEIPTS

@@ -1,0 +1,39 @@
+flowchart TB
+    subgraph Ingestion["Client Ingestion & Document Storage"]
+        CLIENT["Revisor 1 Client / Portal"] -->|"Upload Receipt Scan"| S3[("AWS S3: receipt_files")]
+        VIEWER["Win-Man File Viewer (PHP)"] -->|"View / Rotate Scan"| S3
+    end
+
+    subgraph Messaging["Asynchronous Event Queue"]
+        WINMAN_APP["Win-Man ERP Application"] -->|"Enqueue Typing Task"| SQS["AWS SQS: receipt_files (Batch: 1)"]
+        SQS -->|"Event Trigger"| LAMBDA["AWS Lambda Container (Python 3.12 / 10GB)"]
+    end
+
+    subgraph Security["Secrets Management"]
+        SECRETS["AWS Secrets Manager"] -->|"Dynamic GCP Credentials"| LAMBDA
+    end
+
+    subgraph VisionAI["Vision & Multimodal AI Pipeline"]
+        LAMBDA -->|"Stream Image Bytes"| S3
+        LAMBDA --> PREPROC["PIL Image Processor (LANCZOS & Max-Pixel Guard)"]
+        PREPROC --> GCP_VISION["Google Cloud Vision API (Hierarchical OCR)"]
+        GCP_VISION -->|"Raw Text + Token Annotations"| THREADPOOL["ThreadPoolExecutor (workers=2)"]
+        THREADPOOL -->|"Core Prompt + Base64"| GPT4O_CORE["OpenAI GPT-4o (ReceiptData Schema)"]
+        THREADPOOL -->|"Recon Prompt + Base64"| GPT4O_RECON["OpenAI GPT-4o (ReconciliationData Schema)"]
+        GPT4O_CORE --> MERGE["Result Merge & Sanitizer (Null-Byte Scrub)"]
+        GPT4O_RECON --> MERGE
+    end
+
+    subgraph LedgerDB["Win-Man PostgreSQL Accounting Core"]
+        MERGE -->|"SET session.username = 'da@revisor1.dk'"| PG_CORE[("PostgreSQL Database")]
+        PG_CORE --> TYPING_TBL["double_entry.typing_output"]
+        PG_CORE --> BOT_LOG["task_bots.typer_bot_output"]
+        PG_CORE --> OCR_CACHE["double_entry.receipt_ocrs"]
+        PG_CORE --> RULES_TBL["bank_transaction_rules"]
+    end
+
+    subgraph AutoAccountant["Autonomous Reconciliation Bot"]
+        PG_CORE -->|"Customer Bank Feeds & History"| RECON_BOT["Auto-Accountant Service (Python)"]
+        RECON_BOT -->|"Pattern Synthesis"| O3_MINI["OpenAI o3-mini Reasoning Engine"]
+        O3_MINI -->|"Generated SQL Rules"| RULES_TBL
+    end

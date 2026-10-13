@@ -1,0 +1,29 @@
+flowchart TD
+    START(["Raw Receipt Image Ingestion (S3)"]) --> DECOMP["Decompression Bomb Guard (Image.MAX_IMAGE_PIXELS = None)"]
+    DECOMP --> LOAD["Load Binary Stream into Temporary Buffer"]
+    LOAD --> VALIDATE{"Verify Image Content (img.verify)"}
+
+    VALIDATE -->|Corrupted / Unidentified| ERR_IMG["Raise RuntimeError (Invalid Image File)"]
+    VALIDATE -->|Valid Image| DIM_CHECK{"Check Total Pixels (width * height > 74,000,000)"}
+
+    DIM_CHECK -->|Exceeds 74M Limit| CALC_SCALE["Calculate Scale Factor = sqrt(74,000,000 / total_pixels)"]
+    CALC_SCALE --> RESIZE["Downsample Image with Image.Resampling.LANCZOS"]
+    RESIZE --> COLOR_CHECK{"Color Mode in (RGBA, P)?"}
+    COLOR_CHECK -->|Yes| CONV_RGB["Convert to Standard RGB"]
+    COLOR_CHECK -->|No| SAVE_JPEG["Save Optimized JPEG Buffer (Quality: 95)"]
+    CONV_RGB --> SAVE_JPEG
+
+    DIM_CHECK -->|Within Safe Boundary| COLOR_CHECK_SAFE{"Color Mode in (RGBA, P)?"}
+    COLOR_CHECK_SAFE -->|Yes| CONV_RGB_SAFE["Convert to Standard RGB"]
+    COLOR_CHECK_SAFE -->|No| VISION_CALL["Submit Payload to Google Cloud Vision API"]
+    CONV_RGB_SAFE --> VISION_CALL
+    SAVE_JPEG --> VISION_CALL
+
+    VISION_CALL --> OCR_RESULT{"Vision API Response Status"}
+    OCR_RESULT -->|API Error / Empty| NO_TEXT["Raise NoReadableTextError (Logged as Expected Outcome)"]
+    NO_TEXT --> RECORD_EMPTY["Record '-' and Error Message in double_entry.receipt_ocrs"]
+
+    OCR_RESULT -->|Success| HIERARCHICAL["Parse Pages -> Blocks -> Paragraphs -> Words -> Symbols"]
+    HIERARCHICAL --> RAW_OCR["Format Normalized Raw OCR Text Stream"]
+    RAW_OCR --> CACHE_DB["Upsert Cache into double_entry.receipt_ocrs (ON CONFLICT DO NOTHING)"]
+    CACHE_DB --> NEXT_STAGE(["Forward OCR Stream & Clean Image to Parallel LLM Extractors"])

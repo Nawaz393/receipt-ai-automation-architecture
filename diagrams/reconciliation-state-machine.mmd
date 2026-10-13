@@ -1,0 +1,63 @@
+stateDiagram-v2
+    [*] --> UPLOADED: Client uploads scan to Revisor 1 portal
+    UPLOADED --> QUEUED: Win-Man enqueues task to SQS (receipt_files)
+
+    state QUEUED {
+        [*] --> CheckTaskState
+        CheckTaskState --> TASK_OPEN: is_task_open == True
+        CheckTaskState --> TASK_CLOSED: is_task_open == False
+    }
+
+    TASK_CLOSED --> ABORTED: Discard task without mutation
+    ABORTED --> [*]
+
+    TASK_OPEN --> PROCESSING_VISION: Download S3 image bytes
+
+    state PROCESSING_VISION {
+        [*] --> CheckPixelCount
+        CheckPixelCount --> LANCZOS_RESIZING: Pixels > 74M
+        CheckPixelCount --> PASS_THROUGH: Pixels <= 74M
+        LANCZOS_RESIZING --> VISION_OCR: Call Google Cloud Vision
+        PASS_THROUGH --> VISION_OCR: Call Google Cloud Vision
+    }
+
+    PROCESSING_VISION --> OCR_FAILED: Empty / Unreadable text
+    OCR_FAILED --> LOG_OCR_ERROR: Write '-' to receipt_ocrs (error_message logged)
+    LOG_OCR_ERROR --> [*]
+
+    PROCESSING_VISION --> OCR_CACHED: Text annotation extracted & stored
+
+    state EXTRACTING_SEMANTICS {
+        [*] --> PARALLEL_LLM_DISPATCH
+        PARALLEL_LLM_DISPATCH --> CORE_EXTRACTION: GPT-4o (ReceiptData)
+        PARALLEL_LLM_DISPATCH --> RECON_EXTRACTION: GPT-4o (ReconciliationData)
+        CORE_EXTRACTION --> MERGE_AND_SCRUB
+        RECON_EXTRACTION --> MERGE_AND_SCRUB
+        MERGE_AND_SCRUB --> VAT_CROSS_CHECK: Brutto = Netto * 1.25 check
+    }
+
+    OCR_CACHED --> EXTRACTING_SEMANTICS
+
+    EXTRACTING_SEMANTICS --> MUTATION_READY: Mathematical validation complete
+
+    state MUTATION_READY {
+        [*] --> INJECT_AUDIT_SESSION: SET session.username = 'da@revisor1.dk'
+        INJECT_AUDIT_SESSION --> UPDATE_TYPING: UPDATE double_entry.typing_output
+        UPDATE_TYPING --> UPDATE_TYPER_BOT: UPDATE task_bots.typer_bot_output
+        UPDATE_TYPER_BOT --> UPDATE_RECON_DATA: UPDATE double_entry.receipt_ocrs
+    }
+
+    MUTATION_READY --> STAGED_FOR_RECONCILIATION: Database transaction committed
+
+    state STAGED_FOR_RECONCILIATION {
+        [*] --> EVALUATE_BANK_RULES
+        EVALUATE_BANK_RULES --> AUTO_RECONCILED: Bank text matches active rule (Regex match)
+        EVALUATE_BANK_RULES --> MANUAL_REVIEW: Incomplete fields / Complex mismatch
+        EVALUATE_BANK_RULES --> RULE_SYNTHESIS: o3-mini generates new bank rule candidate
+    }
+
+    RULE_SYNTHESIS --> PENDING_APPROVAL: Staged in bank_transaction_rules (active = false)
+    PENDING_APPROVAL --> AUTO_RECONCILED: Auditor confirms rule in UI
+    MANUAL_REVIEW --> BOOKED: Auditor manual adjustment
+    AUTO_RECONCILED --> BOOKED: Auto-booked with Danish moms codes (I25/U25)
+    BOOKED --> [*]

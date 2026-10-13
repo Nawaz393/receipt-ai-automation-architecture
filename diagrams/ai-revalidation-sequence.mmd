@@ -1,0 +1,49 @@
+sequenceDiagram
+    autonumber
+    participant SQS as "AWS SQS Queue"
+    participant Lambda as "AWS Lambda Handler"
+    participant PreProc as "Image Processor"
+    participant GCP as "Google Cloud Vision"
+    participant GPT as "OpenAI GPT-4o (ThreadPool)"
+    participant Rules as "Danish Tax Rules Engine"
+    participant PG as "PostgreSQL (Win-Man)"
+    participant o3 as "Auto-Accountant (o3-mini)"
+
+    SQS->>Lambda: SQS Message (receipt_id, typing_output_id, action)
+    Lambda->>PG: is_task_open(typing_output_id)
+    PG-->>Lambda: True (Task Active)
+
+    Lambda->>PreProc: Download & downsample receipt image (LANCZOS)
+    PreProc->>GCP: text_detection(image_bytes)
+    GCP-->>PreProc: Hierarchical TextAnnotation
+    PreProc-->>Lambda: Normalized OCR text
+
+    par Parallel Dual-Schema Parsing
+        Lambda->>GPT: Core Prompt: Date hierarchy, DKK prioritization + Base64 image
+        GPT-->>Lambda: ReceiptData (Date, Amount, Currency, VatAmount, Degrees, Matching)
+    and Parallel Dual-Schema Parsing
+        Lambda->>GPT: Reconciliation Prompt: CVR, IBAN, Line Items + Base64 image
+        GPT-->>Lambda: ReconciliationData (seller_name, seller_cvr, payment_method, card_last_4)
+    end
+
+    Lambda->>Rules: Validate Danish VAT (Brutto = Netto * 1.25) & Date hierarchy
+    alt VAT / Math Discrepancy or Missing Mandatory Fields
+        Rules-->>Lambda: Tax calculation inconsistency or missing key
+        Lambda->>Lambda: Invalidate matching_information (Set to None)
+        Lambda->>PG: Log audit flag to task_bots.logs
+    else Valid Mathematical Verification
+        Rules-->>Lambda: Verification Passed
+    end
+
+    Lambda->>Lambda: clean_parsed_data (Strip null bytes \x00, sanitize empty tokens)
+    Lambda->>PG: SET session.username = 'da@revisor1.dk'
+    Lambda->>PG: UPDATE double_entry.typing_output (Core fields)
+    Lambda->>PG: UPDATE task_bots.typer_bot_output (JSONB audit payload)
+    Lambda->>PG: UPDATE double_entry.receipt_ocrs (Extended reconciliation metadata)
+    Lambda-->>SQS: Delete / ACK Message
+
+    Note over PG,o3: Autonomous Asynchronous Reconciliation Phase
+    o3->>PG: Query unbooked bank feeds & receipts_for_bank_based_accounting
+    o3->>o3: Analyze bank_text regex patterns & VAT codes (I25/U25)
+    o3->>PG: Propose INSERT INTO bank_transaction_rules (active = false)
+    PG-->>o3: Rules Staged for Auditor 1-Click Verification
