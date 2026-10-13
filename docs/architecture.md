@@ -2,19 +2,19 @@
 
 [← Main README](../README.md) · [← Documentation Index](README.md)
 
-This document details the event-driven serverless architecture, request lifecycle, memory isolation, and fault recovery mechanisms of the **Win-Man / Revisor1 AI Receipt Extraction & Reconciliation Suite**.
+This document details the event-driven serverless architecture, request lifecycle, memory isolation, and fault recovery mechanisms of the **Enterprise AI Receipt Extraction & Ledger Reconciliation Platform**.
 
 ---
 
 ## 1. High-Throughput Event-Driven Architecture
 
-The processing pipeline is architected around containerized **AWS Lambda** instances (provisioned with 10GB RAM and 6 vCPUs) backed by **Amazon SQS** to decouple heavy image downsampling and multi-modal LLM reasoning from synchronous HTTP web clients:
+The processing pipeline is architected around containerized **AWS Lambda** worker instances backed by **Amazon SQS** to decouple heavy image downsampling and multi-modal LLM reasoning from synchronous HTTP web clients:
 
 ```mermaid
 flowchart TB
     subgraph ClientAndSource ["1. Ingestion & Storage"]
-        User["Revisor Accountant / Mobile Upload"]
-        FileViewer["Remote Document Server (fileviewer.revisor1.dk)"]
+        User["Accountant / Mobile Client Upload"]
+        FileViewer["Remote Document Server (document-viewer.internal)"]
         S3Bucket[("Amazon S3 Receipt Archive")]
     end
 
@@ -23,8 +23,8 @@ flowchart TB
         DLQ["Dead Letter Queue (3 Max Receives)"]
     end
 
-    subgraph WorkerLayer ["3. High-Memory Compute Tier"]
-        LambdaWorker["AWS Lambda Container (10GB RAM / 6 vCPUs)"]
+    subgraph WorkerLayer ["3. Elastic Compute Tier"]
+        LambdaWorker["AWS Lambda Container (Serverless Worker)"]
         PillowEngine["Pillow / LANCZOS Downsampling Engine"]
         GCPSDK["Google Cloud Vision Client"]
         OpenAISDK["OpenAI Structured Outputs Client"]
@@ -37,7 +37,7 @@ flowchart TB
     end
 
     subgraph DatabaseTier ["5. Core Accounting ERP"]
-        WinManDB[("Win-Man PostgreSQL / MSSQL Double-Entry Core")]
+        ErpDB[("Enterprise ERP PostgreSQL / MSSQL Core")]
         AuditTrail["audit_log (Session Attributed)"]
     end
 
@@ -52,9 +52,9 @@ flowchart TB
     GCVision --> OpenAISDK
     OpenAISDK --> GPT4o
     GPT4o --> LambdaWorker
-    LambdaWorker -->|SET session.username| WinManDB
-    WinManDB --> AuditTrail
-    WinManDB --> O3Mini
+    LambdaWorker -->|SET session.username| ErpDB
+    ErpDB --> AuditTrail
+    ErpDB --> O3Mini
 ```
 
 ---
@@ -77,7 +77,7 @@ flowchart TB
    - The system mathematically tests whether the statutory 25% VAT equation holds ($Brutto = Netto \times 1.25$).
    - If inconsistent, a targeted retry or auto-accountant prompt adjusts rounding drift without hallucination.
 6. **Session-Scoped Database Mutation**:
-   - The worker executes `SET session.username = 'da@revisor1.dk'` and commits structured rows into `double_entry.typing_output` and `task_bots.typer_bot_output`.
+   - The worker executes `SET session.username = 'ai-service@accounting.internal'` and commits structured rows into `double_entry.typing_output` and `task_bots.typer_bot_output`.
 
 ---
 

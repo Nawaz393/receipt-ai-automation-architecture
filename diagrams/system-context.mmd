@@ -1,12 +1,12 @@
 flowchart TB
     subgraph Ingestion["Client Ingestion & Document Storage"]
-        CLIENT["Revisor 1 Client / Portal"] -->|"Upload Receipt Scan"| S3[("AWS S3: receipt_files")]
-        VIEWER["Win-Man File Viewer (PHP)"] -->|"View / Rotate Scan"| S3
+        CLIENT["Client Mobile / Web Portal"] -->|"Upload Receipt Scan"| S3[("AWS S3: receipt_files")]
+        VIEWER["ERP File Viewer Portal"] -->|"View / Rotate Scan"| S3
     end
 
     subgraph Messaging["Asynchronous Event Queue"]
-        WINMAN_APP["Win-Man ERP Application"] -->|"Enqueue Typing Task"| SQS["AWS SQS: receipt_files (Batch: 1)"]
-        SQS -->|"Event Trigger"| LAMBDA["AWS Lambda Container (Python 3.12 / 10GB)"]
+        ERP_APP["Core ERP Application"] -->|"Enqueue Typing Task"| SQS["AWS SQS: receipt_files (Batch: 1)"]
+        SQS -->|"Event Trigger"| LAMBDA["AWS Lambda Container (Python 3.12 Serverless)"]
     end
 
     subgraph Security["Secrets Management"]
@@ -24,8 +24,8 @@ flowchart TB
         GPT4O_RECON --> MERGE
     end
 
-    subgraph LedgerDB["Win-Man PostgreSQL Accounting Core"]
-        MERGE -->|"SET session.username = 'da@revisor1.dk'"| PG_CORE[("PostgreSQL Database")]
+    subgraph LedgerDB["Enterprise ERP PostgreSQL Core"]
+        MERGE -->|"SET session.username = 'ai-service@accounting.internal'"| PG_CORE[("PostgreSQL Database")]
         PG_CORE --> TYPING_TBL["double_entry.typing_output"]
         PG_CORE --> BOT_LOG["task_bots.typer_bot_output"]
         PG_CORE --> OCR_CACHE["double_entry.receipt_ocrs"]

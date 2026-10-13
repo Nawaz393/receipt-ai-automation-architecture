@@ -4,7 +4,7 @@
 
 - **Status:** Accepted
 - **Context:** Under Danish statutory accounting regulations (*Bogføringsloven*), any automated software modifying double-entry ledger entries or staging reconciliations must provide immutable audit attribution identifying the exact automated process or agent responsible. Standard database connection pools using generic user credentials violate compliance rules if transactions cannot be tied to a verified identity.
-- **Decision:** Enforce session-level context injection by executing `SET session.username = 'da@revisor1.dk'` immediately prior to executing any write or reconciliation mutation against the Win-Man MSSQL/PostgreSQL database.
+- **Decision:** Enforce session-level context injection by executing `SET session.username = 'ai-service@accounting.internal'` immediately prior to executing any write or reconciliation mutation against the Core ERP PostgreSQL/MSSQL database.
 - **Benefits:**
   - Automated ledger entries trigger internal database audit logs tied directly to the AI service account.
   - Ensures compliance with Danish auditing authorities with zero application-level logging overhead.

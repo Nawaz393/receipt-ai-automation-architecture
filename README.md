@@ -1,9 +1,9 @@
-# Win-Man / Revisor1 AI Receipt Automation & Auto-Accountant Architecture
+# Enterprise AI Receipt Automation & Autonomous Bookkeeping Architecture
 
-A documentation-first architectural showcase of the event-driven receipt extraction, Danish statutory VAT cross-validation, and autonomous bank ledger reconciliation platform engineered for **Revisor 1** (`revisor1.dk`), a leading Danish accounting and auditing firm.
+A documentation-first architectural showcase of the event-driven receipt extraction, statutory VAT cross-validation, and autonomous bank ledger reconciliation platform engineered for an enterprise European accounting and auditing firm.
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
-![AWS Lambda](https://img.shields.io/badge/AWS_Lambda-10GB_Container-FF9900?logo=awslambda&logoColor=white)
+![AWS Lambda](https://img.shields.io/badge/AWS_Lambda-Containerized_Serverless-FF9900?logo=awslambda&logoColor=white)
 ![Pillow](https://img.shields.io/badge/Pillow-LANCZOS_Resampling-blue)
 ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o_%7C_o3--mini-412991?logo=openai&logoColor=white)
 ![Google Cloud Vision](https://img.shields.io/badge/GCP_Vision-OCR_Annotation-4285F4?logo=googlecloud&logoColor=white)
@@ -13,7 +13,7 @@ A documentation-first architectural showcase of the event-driven receipt extract
 
 ## Executive Architectural Summary & Impact
 
-Operating under Danish statutory accounting law (*Bogføringsloven*) and Danish Tax Agency (**SKAT**) regulations, processing financial receipts has historically required substantial manual typist intervention. The **Win-Man AI Receipt Extraction & Reconciliation Suite** replaces manual data-entry contractors with an event-driven, containerized AWS Lambda microservice and an autonomous bank rule reasoning bot.
+Operating under statutory accounting law (*Bogføringsloven*) and regulatory tax agency requirements, processing financial receipts has historically required substantial manual typist intervention. The **Enterprise AI Receipt Extraction & Reconciliation Suite** replaces manual data-entry contractors with an event-driven, containerized AWS Lambda microservice and an autonomous bank rule reasoning bot.
 
 ### Quantified Production Impact (Audited Production Data)
 
@@ -32,13 +32,13 @@ Operating under Danish statutory accounting law (*Bogføringsloven*) and Danish 
 ```mermaid
 flowchart TB
     subgraph Ingestion["Client Ingestion & Document Storage"]
-        CLIENT["Revisor 1 Client / Mobile App"] -->|"Upload Receipt Image"| S3[("AWS S3: receipt_files")]
-        VIEWER["Win-Man File Viewer (PHP)"] -->|"Rotate / Inspect Scan"| S3
+        CLIENT["Client Mobile App / Web Portal"] -->|"Upload Receipt Image"| S3[("AWS S3: receipt_files")]
+        VIEWER["ERP Document Viewer (PHP)"] -->|"Rotate / Inspect Scan"| S3
     end
 
     subgraph Messaging["Asynchronous Event Queue"]
-        WINMAN_APP["Win-Man ERP Core (revisor1.dk)"] -->|"Enqueue Task ID"| SQS["AWS SQS: receipt_files (Batch: 1)"]
-        SQS -->|"Event Trigger"| LAMBDA["AWS Lambda Container (Python 3.12 / 10GB)"]
+        ERP_APP["Enterprise ERP Core"] -->|"Enqueue Task ID"| SQS["AWS SQS: receipt_files (Batch: 1)"]
+        SQS -->|"Event Trigger"| LAMBDA["AWS Lambda Container (Python 3.12)"]
     end
 
     subgraph Security["Secrets Management"]
@@ -56,8 +56,8 @@ flowchart TB
         GPT4O_RECON --> MERGE
     end
 
-    subgraph LedgerDB["Win-Man PostgreSQL Accounting Core"]
-        MERGE -->|"SET session.username = 'da@revisor1.dk'"| PG_CORE[("PostgreSQL Database")]
+    subgraph LedgerDB["PostgreSQL Accounting Core"]
+        MERGE -->|"SET session.username = 'ai-service@accounting.internal'"| PG_CORE[("PostgreSQL Database")]
         PG_CORE --> TYPING_TBL["double_entry.typing_output"]
         PG_CORE --> BOT_LOG["task_bots.typer_bot_output"]
         PG_CORE --> OCR_CACHE["double_entry.receipt_ocrs"]
@@ -78,7 +78,7 @@ flowchart TB
 - **Computer Vision Ingestion Guardrails**: Dynamic proportional downsampling for high-DPI scans exceeding Google Cloud Vision's 75M-pixel limit using high-fidelity `Image.Resampling.LANCZOS` and Pillow decompression bomb defense (`Image.MAX_IMAGE_PIXELS = None`).
 - **Parallel Dual-Schema Multimodal Parsing**: Concurrently extracts core accounting fields (`ReceiptData`) and extended bank audit metadata (`ReconciliationData`) via `ThreadPoolExecutor(max_workers=2)` against OpenAI `gpt-4o` structured outputs, preventing token truncation.
 - **Danish Accounting Compliance & Tax Heuristics**: Deterministic statutory 25% Danish VAT (*Moms*) verification ($Brutto = Netto \times 1.25$), strict date priority hierarchies (Factura Dato vs. SKAT *"modtaget den"* vs. Gebyr period intervals), and handwritten currency override detection (EUR/USD converted to DKK).
-- **Session-Scoped ERP Auditing**: Injects audited bot credentials (`SET session.username = 'da@revisor1.dk'`) before running double-entry ledger mutations, satisfying regulatory audit compliance (*Bogføringsloven*).
+- **Session-Scoped ERP Auditing**: Injects audited bot credentials (`SET session.username = 'ai-service@accounting.internal'`) before running double-entry ledger mutations, satisfying regulatory audit compliance (*Bogføringsloven*).
 - **Defensive Data Integrity**: Recursive ASCII null-byte (`\x00`) scrubbing to prevent PostgreSQL JSONB crashes and atomic nullification of `matching_information` on ambiguous accounting entries to eliminate downstream bank mis-reconciliations.
 - **Autonomous Rule Proposer (`auto_accountant`)**: Deep reasoning service powered by OpenAI `o3-mini` synthesizing regex-based SQL rules from historical bank feeds, achieving >80% automated ledger matching with >90% auditor acceptance.
 
@@ -103,7 +103,7 @@ flowchart TB
 
 | Layer | Technologies / Patterns | Rationale |
 |---|---|---|
-| **Runtime & Compute** | AWS Lambda Container (Python 3.12, 10GB RAM) | Absorbs spiky quarterly tax workloads with zero idle cost; 10GB grants 6 vCPUs for rapid LANCZOS processing |
+| **Runtime & Compute** | AWS Lambda Container (Python 3.12) | Absorbs spiky quarterly tax workloads with zero idle cost; elastic serverless compute for rapid LANCZOS processing |
 | **Messaging & Queuing** | Amazon SQS (`receipt_files`, BatchSize=1) | Decouples document ingestion from image analysis with visibility timeout retry safety |
 | **Image Processing** | Pillow (`PIL`), LANCZOS Resampling, OpenCV | Guards against decompression bombs; safely downsamples 74M+ pixel images below Google Cloud limits |
 | **OCR Engine** | Google Cloud Vision API (`text_detection`) | High-accuracy hierarchical spatial token extraction for European multilingual receipts |
@@ -116,7 +116,7 @@ flowchart TB
 
 ## Contact
 
-**M Nawaz Khan — Principal Software Architect & Full Stack Engineer**
+**M Nawaz Khan  Full Stack Engineer**
 
 - GitHub: [Nawaz393](https://github.com/Nawaz393)
 - LinkedIn: [Muhammad Nawaz Khan](https://www.linkedin.com/in/nawaz393)

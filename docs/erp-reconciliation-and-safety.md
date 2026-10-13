@@ -4,7 +4,7 @@
 
 ## Enterprise Accounting Safety & Legal Compliance
 
-In accounting technology, an incorrect automated write to a general ledger is far more damaging than a failed read. The **Win-Man / Revisor1** platform operates under strict regulatory controls (*Bogføringsloven*), combining session-level database authorization, defensive null-byte scrubbing, atomic data validation, and autonomous AI-driven bank reconciliation.
+In accounting technology, an incorrect automated write to a general ledger is far more damaging than a failed read. The enterprise platform operates under strict regulatory controls (*Bogføringsloven*), combining session-level database authorization, defensive null-byte scrubbing, atomic data validation, and autonomous AI-driven bank reconciliation.
 
 ```mermaid
 flowchart TD
@@ -13,7 +13,7 @@ flowchart TD
     INTEGRITY_CHECK -->|Missing / Null Field| STRIP_MATCH["Invalidate matching_information = NULL<br/>(Prevents Auto-Match with Bank)"]
     INTEGRITY_CHECK -->|All Fields Valid| PRESERVE_MATCH[Retain Matching Reference]
 
-    STRIP_MATCH --> DB_SESSION["Inject Session Context:<br/>SET session.username = 'da@revisor1.dk'"]
+    STRIP_MATCH --> DB_SESSION["Inject Session Context:<br/>SET session.username = 'ai-service@accounting.internal'"]
     PRESERVE_MATCH --> DB_SESSION
 
     DB_SESSION --> AUDIT_TRIGGERS{"PostgreSQL Triggers:<br/>Verify session.username"}
@@ -33,7 +33,7 @@ flowchart TD
 
 ## 1. Database Session Context Injection (`SET session.username`)
 
-The Win-Man ERP protects double-entry ledger state via PostgreSQL row-level audit triggers. Any query modifying financial tables without an explicit session identity is immediately rejected.
+The Core ERP database protects double-entry ledger state via PostgreSQL row-level audit triggers. Any query modifying financial tables without an explicit session identity is immediately rejected.
 
 Before performing inserts or updates, the bot injects an authorized auditor session variable:
 
@@ -41,11 +41,11 @@ Before performing inserts or updates, the bot injects an authorized auditor sess
 # Session configuration injection in DatabaseManager
 self.cursor.execute("SELECT set_config('session.username', current_user::text, true)")
 # Or for background service bots:
-self.cursor.execute("SET session.username = 'da@revisor1.dk'")
+self.cursor.execute("SET session.username = 'ai-service@accounting.internal'")
 ```
 
 ### Statutory Compliance Benefits
-- **Audit Traceability**: Under Danish law, automated systems cannot modify records anonymously. Every AI ledger transaction is tagged with the accredited service identity (`da@revisor1.dk`).
+- **Audit Traceability**: Under Danish law, automated systems cannot modify records anonymously. Every AI ledger transaction is tagged with the accredited service identity (`ai-service@accounting.internal`).
 - **Defensive Boundary**: In the event of an untrusted internal connection or unauthorized script execution, database triggers fail-closed, blocking modifications unless an audited user is present.
 
 ---
@@ -79,7 +79,7 @@ def clean_parsed_data(self, data: Dict) -> Dict:
 
 ## 3. Atomic Integrity Defense: Invalidation of `matching_information`
 
-In Win-Man, the `matching_information` column (e.g., invoice number, order number, reference string) triggers automated matching bots that link expense receipts directly to bank statement debits.
+In the core ERP database, the `matching_information` column (e.g., invoice number, order number, reference string) triggers automated matching bots that link expense receipts directly to bank statement debits.
 
 If an AI extraction produces a receipt with a valid invoice number but an ambiguous amount, currency, or tax figure, an automated bank match would post incorrect amounts to customer ledgers.
 
@@ -110,7 +110,7 @@ The second core subsystem of the architecture is the **Bank Auto-Accountant**, a
    WHERE entry_date >= '2023-01-01';
    ```
 2. **Deep Pattern Synthesis (`o3-mini`)**:
-   `o3-mini` evaluates recurring bank narrative text strings (e.g., `"KORTKØB 12.04 DAO365 COPENHAGEN"`, `"STRIPE PAYOUT *REVISOR1"`, `"SHELL 2341 AALBORG"`).
+   `o3-mini` evaluates recurring bank narrative text strings (e.g., `"KORTKØB 12.04 DAO365 COPENHAGEN"`, `"STRIPE PAYOUT *ACCOUNTING"`, `"SHELL 2341 AALBORG"`).
    It synthesizes precise PostgreSQL pattern rules:
    ```sql
    SELECT '$1' ILIKE '% DAO %' OR '$1' ILIKE '% DAO365 %';
@@ -125,7 +125,7 @@ The second core subsystem of the architecture is the **Bank Auto-Accountant**, a
     '0', '-999999', '2811', 'I25');
    ```
 4. **Auditor 1-Click Verification**:
-   Accountants review proposed rules in the Win-Man administrative dashboard. Once approved, `active` is toggled to `true`. From that moment onward, incoming bank transactions matching the rule are booked automatically to chart-of-accounts number `2811` with Danish VAT code `I25` with 100% deterministic accuracy.
+   Accountants review proposed rules in the ERP administrative dashboard. Once approved, `active` is toggled to `true`. From that moment onward, incoming bank transactions matching the rule are booked automatically to chart-of-accounts number `2811` with Danish VAT code `I25` with 100% deterministic accuracy.
 
 ### Quantified Results
 - **Auto-Reconciliation Rate**: Over 80% of routine client bank transactions auto-reconcile without human intervention.

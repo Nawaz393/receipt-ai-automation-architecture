@@ -1,6 +1,6 @@
 stateDiagram-v2
-    [*] --> UPLOADED: Client uploads scan to Revisor 1 portal
-    UPLOADED --> QUEUED: Win-Man enqueues task to SQS (receipt_files)
+    [*] --> UPLOADED: Client uploads scan to client portal
+    UPLOADED --> QUEUED: ERP enqueues task to SQS (receipt_files)
 
     state QUEUED {
         [*] --> CheckTaskState
@@ -41,7 +41,7 @@ stateDiagram-v2
     EXTRACTING_SEMANTICS --> MUTATION_READY: Mathematical validation complete
 
     state MUTATION_READY {
-        [*] --> INJECT_AUDIT_SESSION: SET session.username = 'da@revisor1.dk'
+        [*] --> INJECT_AUDIT_SESSION: SET session.username = 'ai-service@accounting.internal'
         INJECT_AUDIT_SESSION --> UPDATE_TYPING: UPDATE double_entry.typing_output
         UPDATE_TYPING --> UPDATE_TYPER_BOT: UPDATE task_bots.typer_bot_output
         UPDATE_TYPER_BOT --> UPDATE_RECON_DATA: UPDATE double_entry.receipt_ocrs

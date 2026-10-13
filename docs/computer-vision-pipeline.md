@@ -44,9 +44,9 @@ from PIL import Image
 Image.MAX_IMAGE_PIXELS = None
 ```
 
-In standard AWS Lambda environments with 512MB–3GB RAM, decompressing an uncompressed 80-megapixel 4-channel RGBA image into an uncompressed memory buffer requires approximately:
+Decompressing an uncompressed 80-megapixel 4-channel RGBA image into an uncompressed memory buffer requires approximately:
 $$80{,}000{,}000 \times 4 \text{ bytes} \approx 320 \text{ MB}$$
-During image transformation, color quantization, and LANCZOS filtering, intermediate memory peaks can exceed 4–6x the base buffer size. By provisioning the Lambda runtime with **10,240 MB (10 GB)** of memory, the worker ensures sufficient headroom to execute in-memory image transformations without risking an out-of-memory (`OOM`) process termination.
+During image transformation, color quantization, and LANCZOS filtering, intermediate memory peaks can exceed 4–6x the base buffer size. By provisioning containerized Lambda compute with dedicated high-memory headroom and dynamic scaling, the worker ensures sufficient capacity to execute in-memory image transformations without risking an out-of-memory (`OOM`) process termination.
 
 ---
 
@@ -120,9 +120,9 @@ Physical receipts photographed using mobile devices often arrive rotated by 90°
 1. Google Cloud Vision and GPT-4o read multi-oriented text natively.
 2. The core parser detects the orientation angle and populates the `Degrees` field (`0, 90, 180, 270`).
 3. This rotation angle is persisted to `receipts.degrees`.
-4. When human auditors inspect receipts in the Win-Man PHP file viewer, the image is rendered with on-the-fly CSS/PHP rotation:
+4. When human auditors inspect receipts in the web file viewer portal, the image is rendered with on-the-fly CSS/PHP rotation:
    ```
-   http://fileviewer.revisor1.dk/lib/GetFile.php?filename={s3_path}&rotateDegrees={degrees}
+   http://document-viewer.internal/lib/GetFile.php?filename={s3_path}&rotateDegrees={degrees}
    ```
 This avoids degrading original S3 image binaries while guaranteeing optimal orientation for human review.
 

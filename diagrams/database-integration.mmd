@@ -1,7 +1,7 @@
 flowchart TD
     subgraph BotSession["Session Context Injection & Authentication"]
         CONN["Psycopg2 DB Connection"]
-        SET_SESSION["EXECUTE: SET session.username = 'da@revisor1.dk'"]
+        SET_SESSION["EXECUTE: SET session.username = 'ai-service@accounting.internal'"]
         CONN --> SET_SESSION
     end
 

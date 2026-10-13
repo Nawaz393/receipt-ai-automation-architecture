@@ -4,7 +4,7 @@
 
 ## Danish Accounting Domain & Regulatory Context
 
-Operating under the Danish Bookkeeping Act (*Bogføringsloven*) and compliance guidelines established by the Danish Tax Agency (**SKAT**) requires exact financial precision. Unlike generalized receipt processors, the Win-Man AI pipeline incorporates deterministic Danish tax heuristics, strict date precedence hierarchies, and currency normalization rules.
+Operating under the Danish Bookkeeping Act (*Bogføringsloven*) and compliance guidelines established by the Danish Tax Agency (**SKAT**) requires exact financial precision. Unlike generalized receipt processors, the AI accounting pipeline incorporates deterministic Danish tax heuristics, strict date precedence hierarchies, and currency normalization rules.
 
 ```mermaid
 flowchart TD

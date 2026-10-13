@@ -2,7 +2,7 @@
 
 [← Main README](../README.md) · [← Documentation Index](README.md)
 
-This document maps the bounded contexts, core data models, and interaction boundaries of the **Win-Man / Revisor1 AI Receipt Extraction & Reconciliation Suite**.
+This document maps the bounded contexts, core data models, and interaction boundaries of the **Enterprise AI Receipt Extraction & Ledger Reconciliation Platform**.
 
 ---
 
@@ -64,7 +64,7 @@ flowchart TD
 - **Key Files**: `ai_revalidation.py`, `retry_incorrect_amounts.py`.
 
 ### 2.4 Core Double-Entry ERP Domain
-- **Responsibilities**: Injects regulatory user identity (`da@revisor1.dk`), sanitizes ASCII null-bytes from strings, executes parameterized queries against Win-Man double-entry tables, and updates task processing queues.
+- **Responsibilities**: Injects regulatory user identity (`ai-service@accounting.internal`), sanitizes ASCII null-bytes from strings, executes parameterized queries against core double-entry ERP tables, and updates task processing queues.
 - **Key Files**: `database_manager.py`, `sql_models.py`.
 
 ### 2.5 Autonomous Bank Reconciliation Domain

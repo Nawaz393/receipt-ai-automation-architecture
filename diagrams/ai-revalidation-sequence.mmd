@@ -6,7 +6,7 @@ sequenceDiagram
     participant GCP as "Google Cloud Vision"
     participant GPT as "OpenAI GPT-4o (ThreadPool)"
     participant Rules as "Danish Tax Rules Engine"
-    participant PG as "PostgreSQL (Win-Man)"
+    participant PG as "PostgreSQL (Enterprise ERP)"
     participant o3 as "Auto-Accountant (o3-mini)"
 
     SQS->>Lambda: SQS Message (receipt_id, typing_output_id, action)
@@ -36,7 +36,7 @@ sequenceDiagram
     end
 
     Lambda->>Lambda: clean_parsed_data (Strip null bytes \x00, sanitize empty tokens)
-    Lambda->>PG: SET session.username = 'da@revisor1.dk'
+    Lambda->>PG: SET session.username = 'ai-service@accounting.internal'
     Lambda->>PG: UPDATE double_entry.typing_output (Core fields)
     Lambda->>PG: UPDATE task_bots.typer_bot_output (JSONB audit payload)
     Lambda->>PG: UPDATE double_entry.receipt_ocrs (Extended reconciliation metadata)
