@@ -8,31 +8,31 @@ Operating under the Danish Bookkeeping Act (*Bogføringsloven*) and compliance g
 
 ```mermaid
 flowchart TD
-    INPUT[Raw OCR Stream + Downsampled Base64 Image] --> PROMPT_ENGINE[Structured Multimodal Prompts (temp=0)]
+    INPUT["Raw OCR Stream + Downsampled Base64 Image"] --> PROMPT_ENGINE["Structured Multimodal Prompts (temp=0)"]
     PROMPT_ENGINE --> DUAL_LLM["Parallel GPT-4o Invocations"]
 
-    subgraph CoreParsing["Core Extraction (ReceiptData)"]
+    subgraph CoreParsing ["Core Extraction (ReceiptData)"]
         DUAL_LLM --> DATE_RULE["Date Hierarchy Resolution"]
         DUAL_LLM --> CURR_RULE["Currency & Handwritten Override"]
         DUAL_LLM --> AMOUNT_RULE["Gross Amount & Moms Extraction"]
     end
 
-    subgraph ReconParsing["Bank Audit (ReconciliationData)"]
+    subgraph ReconParsing ["Bank Audit (ReconciliationData)"]
         DUAL_LLM --> CVR_RULE["8-Digit CVR Commercial ID"]
         DUAL_LLM --> IBAN_RULE["IBAN & Bank Account Details"]
         DUAL_LLM --> LINE_ITEMS["Itemized Product Breakdown"]
     end
 
-    DATE_RULE --> MERGE[Merge & Validate Payload]
+    DATE_RULE --> MERGE["Merge & Validate Payload"]
     CURR_RULE --> MERGE
     AMOUNT_RULE --> MERGE
     CVR_RULE --> MERGE
     IBAN_RULE --> MERGE
     LINE_ITEMS --> MERGE
 
-    MERGE --> MATH_CHECK{"Statutory 25% VAT Verification:<br/>Brutto == Netto * 1.25?"}
-    MATH_CHECK -->|Passed| STAGE_PERSIST[Stage Validated Payload for DB Session]
-    MATH_CHECK -->|Discrepancy / Incomplete| INVALIDATE_MATCH["Wipe matching_information (Set to None)<br/>Flag for Auditor Review"]
+    MERGE --> MATH_CHECK{"Statutory 25% VAT Verification: Brutto == Netto * 1.25?"}
+    MATH_CHECK -->|Passed| STAGE_PERSIST["Stage Validated Payload for DB Session"]
+    MATH_CHECK -->|Discrepancy / Incomplete| INVALIDATE_MATCH["Wipe matching_information (Set to None) & Flag for Auditor Review"]
     INVALIDATE_MATCH --> STAGE_PERSIST
 ```
 
